@@ -20,4 +20,26 @@
 
 # OS files
 .DS_Store
+Thumbs.db# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Bb]uild/
+[Bb]uilds/
+
+# IDE files
+.vs/
+.idea/
+.vscode/
+
+# Visual Studio generated files
+*.csproj
+*.sln
+*.user
+*.suo
+
+# OS files
+.DS_Store
 Thumbs.db
