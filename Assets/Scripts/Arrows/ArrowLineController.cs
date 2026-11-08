@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class ArrowLineController : MonoBehaviour
@@ -20,9 +19,36 @@ public class ArrowLineController : MonoBehaviour
 
     private Color startOriginalColor;
     private Color endOriginalColor;
+    private ArrowheadController highlightedArrowhead;
 
     private void Awake()
     {
+        CacheInitialState();
+    }
+
+    /// <summary>
+    /// Runtime wiring used by LevelLoader. The loaded level has no
+    /// hand-assigned Inspector references, so the loader supplies them here.
+    /// </summary>
+    public void Configure(
+        ArrowPath path,
+        ArrowheadController start,
+        ArrowheadController end,
+        GameManager manager)
+    {
+        arrowPath = path;
+        startArrowhead = start;
+        endArrowhead = end;
+        gameManager = manager;
+
+        CacheInitialState();
+    }
+
+    private void CacheInitialState()
+    {
+        if (startArrowhead == null || endArrowhead == null)
+            return;
+
         startPosition = startArrowhead.transform.position;
         endPosition = endArrowhead.transform.position;
 
@@ -36,6 +62,32 @@ public class ArrowLineController : MonoBehaviour
             endOriginalColor = endRenderer.color;
     }
 
+    private void LateUpdate()
+    {
+        RefreshVisibleRange();
+    }
+
+    /// <summary>
+    /// Recomputes the visible path section from arrowhead progress.
+    /// LateUpdate calls this; editor validation can call it directly.
+    /// </summary>
+    public void RefreshVisibleRange()
+    {
+        if (isCompleted || arrowPath == null)
+            return;
+
+        if (startArrowhead == null || endArrowhead == null)
+            return;
+
+        float startProgress = startArrowhead.NormalizedPathPosition;
+        float endProgress = endArrowhead.NormalizedPathPosition;
+
+        arrowPath.SetVisibleNormalizedRange(
+            Mathf.Min(startProgress, endProgress),
+            Mathf.Max(startProgress, endProgress)
+        );
+    }
+
     public void ResetLine()
     {
         isCompleted = false;
@@ -47,10 +99,12 @@ public class ArrowLineController : MonoBehaviour
 
         arrowPath.gameObject.SetActive(true);
         arrowPath.GeneratePath();
+        arrowPath.ShowFullPath();
 
         gameObject.SetActive(true);
 
         Debug.Log("Line reset: " + gameObject.name);
+        ArrowheadController.NotifyGameplayStateChanged();
     }
 
     public void CompleteLine()
@@ -63,6 +117,7 @@ public class ArrowLineController : MonoBehaviour
         Debug.Log("Line completed: " + gameObject.name);
 
         gameObject.SetActive(false);
+        ArrowheadController.NotifyGameplayStateChanged();
 
         if (gameManager != null)
             gameManager.LineCompleted();
@@ -92,62 +147,56 @@ public class ArrowLineController : MonoBehaviour
     {
         Color hintColor = Color.yellow;
 
+        highlightedArrowhead = null;
         if (startRenderer != null)
             startRenderer.color = highlighted ? hintColor : startOriginalColor;
 
         if (endRenderer != null)
             endRenderer.color = highlighted ? hintColor : endOriginalColor;
     }
-    public bool CanMoveSafely()
+
+    public void SetArrowheadHint(ArrowheadController arrowhead, bool highlighted)
     {
-        if (isCompleted)
-            return false;
+        if (highlightedArrowhead != null)
+            RestoreArrowheadColor(highlightedArrowhead);
 
-        
-        for (int direction = 0; direction < 2; direction++)
+        highlightedArrowhead = highlighted && arrowhead != null
+            ? arrowhead
+            : null;
+
+        if (highlightedArrowhead != null)
+            GetArrowheadRenderer(highlightedArrowhead).color = Color.yellow;
+    }
+
+    public bool CanArrowheadMoveSafely(ArrowheadController arrowhead)
+    {
+        if (isCompleted || arrowhead == null || arrowhead.IsMoving() ||
+            arrowhead.IsLocked ||
+            (arrowhead != startArrowhead && arrowhead != endArrowhead))
         {
-            bool safe = true;
-
-            for (int i = 1; i <= 100; i++)
-            {
-                float progress = i / 100f;
-
-                if (direction == 1)
-                    progress = 1f - progress;
-
-                Vector3 position =
-                    arrowPath.GetPointAtNormalizedDistance(progress);
-
-                Collider2D[] hits =
-                    Physics2D.OverlapCircleAll(position, 0.15f);
-
-                foreach (Collider2D hit in hits)
-                {
-                    ArrowheadController other =
-                        hit.GetComponent<ArrowheadController>();
-
-                    if (other == null)
-                        continue;
-
-                    if (other.GetLineController() == this)
-                        continue;
-
-                    if (other.GetLineController() != null &&
-                        !other.GetLineController().IsCompleted())
-                    {
-                        safe = false;
-                        break;
-                    }
-                }
-
-                if (!safe)
-                    break;
-            }
-
-            if (safe)
-                return true;
+            return false;
         }
 
-        return false;
+        return arrowhead.CanReachDestinationSafely();
+    }
+
+    private SpriteRenderer GetArrowheadRenderer(
+        ArrowheadController arrowhead)
+    {
+        if (arrowhead == startArrowhead)
+            return startRenderer;
+
+        return endRenderer;
+    }
+
+    private void RestoreArrowheadColor(ArrowheadController arrowhead)
+    {
+        SpriteRenderer renderer = GetArrowheadRenderer(arrowhead);
+        if (renderer == null)
+            return;
+
+        renderer.color = arrowhead == startArrowhead
+            ? startOriginalColor
+            : endOriginalColor;
     }
 }

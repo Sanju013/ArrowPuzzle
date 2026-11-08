@@ -23,6 +23,11 @@ public class ArrowPath : MonoBehaviour
     private readonly List<float> cumulativeDistances =
         new List<float>();
 
+    private List<Vector3> runtimeControlPoints;
+
+    private float visibleFrom;
+    private float visibleTo = 1f;
+
     public float TotalLength { get; private set; }
 
     private void Awake()
@@ -34,6 +39,18 @@ public class ArrowPath : MonoBehaviour
     {
         lineRenderer = GetComponent<LineRenderer>();
 
+        ApplyRendererSettings();
+        GeneratePath();
+    }
+
+    private void ApplyRendererSettings()
+    {
+        if (lineRenderer == null)
+            lineRenderer = GetComponent<LineRenderer>();
+
+        if (lineRenderer == null)
+            return;
+
         lineRenderer.useWorldSpace = true;
         lineRenderer.startWidth = lineWidth;
         lineRenderer.endWidth = lineWidth;
@@ -41,7 +58,28 @@ public class ArrowPath : MonoBehaviour
         lineRenderer.endColor = pathColor;
         lineRenderer.numCapVertices = 8;
         lineRenderer.numCornerVertices = 8;
+    }
 
+    /// <summary>
+    /// Configures a procedurally generated path. Used by LevelLoader so the
+    /// level can be created without hundreds of control-point Transforms.
+    /// </summary>
+    public void Configure(
+        Color color,
+        float width,
+        int samples,
+        IReadOnlyList<Vector3> worldPoints)
+    {
+        pathColor = color;
+        lineWidth = width;
+        samplesPerSegment = Mathf.Max(16, samples);
+
+        runtimeControlPoints = new List<Vector3>(worldPoints);
+
+        if (lineRenderer == null)
+            lineRenderer = GetComponent<LineRenderer>();
+
+        ApplyRendererSettings();
         GeneratePath();
     }
 
@@ -51,22 +89,27 @@ public class ArrowPath : MonoBehaviour
         cumulativeDistances.Clear();
         TotalLength = 0f;
 
-        if (controlPoints.Count < 2)
+        int pointCount = ControlPointCount;
+
+        if (pointCount < 2)
         {
-            lineRenderer.positionCount = 0;
+            if (lineRenderer != null)
+                lineRenderer.positionCount = 0;
+
             return;
         }
 
-        for (int i = 0; i < controlPoints.Count - 1; i++)
+        for (int i = 0; i < pointCount - 1; i++)
         {
-            Vector3 p0 = controlPoints[Mathf.Max(i - 1, 0)].position;
-            Vector3 p1 = controlPoints[i].position;
-            Vector3 p2 = controlPoints[i + 1].position;
-            Vector3 p3 = controlPoints[
-                Mathf.Min(i + 2, controlPoints.Count - 1)
-            ].position;
+            Vector3 p0 = GetControlPoint(Mathf.Max(i - 1, 0));
+            Vector3 p1 = GetControlPoint(i);
+            Vector3 p2 = GetControlPoint(i + 1);
+            Vector3 p3 = GetControlPoint(
+                Mathf.Min(i + 2, pointCount - 1));
 
-            for (int j = 0; j < samplesPerSegment; j++)
+            // Include t = 1.0 so each segment ends exactly at p2,
+            // guaranteeing continuous rendering across segment boundaries.
+            for (int j = 0; j <= samplesPerSegment; j++)
             {
                 float t = (float)j / samplesPerSegment;
 
@@ -78,10 +121,26 @@ public class ArrowPath : MonoBehaviour
             }
         }
 
-        AddSample(controlPoints[controlPoints.Count - 1].position);
+        AddSample(GetControlPoint(pointCount - 1));
 
-        lineRenderer.positionCount = sampledPoints.Count;
-        lineRenderer.SetPositions(sampledPoints.ToArray());
+        ShowFullPath();
+    }
+
+    private int ControlPointCount
+    {
+        get
+        {
+            return runtimeControlPoints != null
+                ? runtimeControlPoints.Count
+                : controlPoints.Count;
+        }
+    }
+
+    private Vector3 GetControlPoint(int index)
+    {
+        return runtimeControlPoints != null
+            ? runtimeControlPoints[index]
+            : controlPoints[index].position;
     }
 
     private Vector3 CatmullRom(
@@ -150,5 +209,161 @@ public class ArrowPath : MonoBehaviour
         return GetPointAtDistance(
             Mathf.Clamp01(t) * TotalLength
         );
+    }
+
+    /// <summary>
+    /// Returns the tangent vector at the given normalized distance along the path.
+    /// Used by arrowheads to orient themselves along the path.
+    /// </summary>
+    public Vector3 GetTangentAtNormalizedDistance(float normalizedDistance)
+    {
+        if (sampledPoints.Count < 2 || TotalLength <= 0.000001f)
+            return Vector3.up;
+
+        float distance = Mathf.Clamp01(normalizedDistance) * TotalLength;
+        float delta = Mathf.Clamp(TotalLength * 0.002f, 0.002f, 0.025f);
+        float before = Mathf.Max(0f, distance - delta);
+        float after = Mathf.Min(TotalLength, distance + delta);
+        Vector3 tangent = GetPointAtDistance(after) - GetPointAtDistance(before);
+        return tangent.sqrMagnitude > 0.0000001f
+            ? tangent.normalized
+            : Vector3.up;
+    }
+
+    /// <summary>
+    public List<Vector3> GetRoutePoints(float from, float to)
+    {
+        List<Vector3> route = new List<Vector3>();
+        if (sampledPoints.Count == 0)
+            return route;
+
+        from = Mathf.Clamp01(from);
+        to = Mathf.Clamp01(to);
+        float fromDistance = from * TotalLength;
+        float toDistance = to * TotalLength;
+        bool forward = toDistance >= fromDistance;
+
+        route.Add(GetPointAtDistance(fromDistance));
+
+        if (forward)
+        {
+            for (int i = 0; i < cumulativeDistances.Count; i++)
+            {
+                float distance = cumulativeDistances[i];
+                if (distance > fromDistance + 0.0001f &&
+                    distance < toDistance - 0.0001f)
+                {
+                    AddVisiblePoint(route, sampledPoints[i]);
+                }
+            }
+        }
+        else
+        {
+            for (int i = cumulativeDistances.Count - 1; i >= 0; i--)
+            {
+                float distance = cumulativeDistances[i];
+                if (distance < fromDistance - 0.0001f &&
+                    distance > toDistance + 0.0001f)
+                {
+                    AddVisiblePoint(route, sampledPoints[i]);
+                }
+            }
+        }
+
+        AddVisiblePoint(route, GetPointAtDistance(toDistance));
+        return route;
+    }
+
+    /// <summary>
+    /// Shows only the section of the path between two normalised distances.
+    /// Used to make the path disappear progressively behind moving heads.
+    /// </summary>
+    public void SetVisibleNormalizedRange(float from, float to)
+    {
+        from = Mathf.Clamp01(from);
+        to = Mathf.Clamp01(to);
+
+        if (from > to)
+        {
+            float swap = from;
+            from = to;
+            to = swap;
+        }
+
+        if (Mathf.Abs(from - visibleFrom) < 0.0001f &&
+            Mathf.Abs(to - visibleTo) < 0.0001f)
+        {
+            return;
+        }
+
+        visibleFrom = from;
+        visibleTo = to;
+
+        ApplyVisibleRange();
+    }
+
+    public void ShowFullPath()
+    {
+        visibleFrom = 0f;
+        visibleTo = 1f;
+
+        ApplyVisibleRange();
+    }
+
+    private void ApplyVisibleRange()
+    {
+        if (lineRenderer == null)
+            return;
+
+        if (sampledPoints.Count == 0)
+        {
+            lineRenderer.positionCount = 0;
+            return;
+        }
+
+        if (visibleFrom <= 0f && visibleTo >= 1f)
+        {
+            lineRenderer.positionCount = sampledPoints.Count;
+            lineRenderer.SetPositions(sampledPoints.ToArray());
+            return;
+        }
+
+        float startDistance = visibleFrom * TotalLength;
+        float endDistance = visibleTo * TotalLength;
+
+        List<Vector3> visiblePoints = new List<Vector3>();
+
+        AddVisiblePoint(visiblePoints,
+            GetPointAtDistance(startDistance));
+
+        for (int i = 0; i < sampledPoints.Count; i++)
+        {
+            float distance = cumulativeDistances[i];
+
+            if (distance > startDistance + 0.0001f &&
+                distance < endDistance - 0.0001f)
+            {
+                AddVisiblePoint(visiblePoints, sampledPoints[i]);
+            }
+        }
+
+        AddVisiblePoint(visiblePoints,
+            GetPointAtDistance(endDistance));
+
+        lineRenderer.positionCount = visiblePoints.Count;
+        lineRenderer.SetPositions(visiblePoints.ToArray());
+    }
+
+    private static void AddVisiblePoint(
+        List<Vector3> points, Vector3 point)
+    {
+        if (points.Count > 0 &&
+            Vector3.SqrMagnitude(
+                points[points.Count - 1] - point) < 0.0000001f)
+        {
+            return;
+        }
+
+        points.Add(point);
     }
 }

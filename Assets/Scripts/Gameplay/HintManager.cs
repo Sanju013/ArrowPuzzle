@@ -27,11 +27,17 @@ public class HintManager : MonoBehaviour
             if (line == null || line.IsCompleted())
                 continue;
 
-            if (line.GetStartArrowhead().IsMoving() ||
-                line.GetEndArrowhead().IsMoving())
+            ArrowheadController startHead = line.GetStartArrowhead();
+            ArrowheadController endHead = line.GetEndArrowhead();
+
+            if (startHead == null || endHead == null)
                 continue;
 
-            if (!line.CanMoveSafely())
+            if (startHead.IsMoving() || endHead.IsMoving())
+                continue;
+
+            if (!line.CanArrowheadMoveSafely(startHead) &&
+                !line.CanArrowheadMoveSafely(endHead))
                 continue;
 
             availableLines.Add(line);

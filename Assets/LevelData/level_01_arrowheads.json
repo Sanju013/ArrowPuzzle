@@ -1,0 +1,201 @@
+{
+  "method": "Arrowhead triangles were measured from Assets/Sprites/Arrows_Level.png. The sprite triangle is equilateral with its local +Y axis through one vertex, so Unity Z rotation = -90 - measured screen angle (mod 120 degrees).",
+  "arrowheads": [
+    {
+      "color": "green",
+      "path": 0,
+      "head": 0,
+      "rotation": -97,
+      "reference_screen_angle": 7
+    },
+    {
+      "color": "green",
+      "path": 0,
+      "head": 1,
+      "rotation": -110,
+      "reference_screen_angle": 20
+    },
+    {
+      "color": "green",
+      "path": 1,
+      "head": 0,
+      "rotation": -161,
+      "reference_screen_angle": 71
+    },
+    {
+      "color": "green",
+      "path": 1,
+      "head": 1,
+      "rotation": -146,
+      "reference_screen_angle": 56
+    },
+    {
+      "color": "green",
+      "path": 2,
+      "head": 0,
+      "rotation": -200,
+      "reference_screen_angle": 110
+    },
+    {
+      "color": "green",
+      "path": 2,
+      "head": 1,
+      "rotation": -185,
+      "reference_screen_angle": 95
+    },
+    {
+      "color": "pink",
+      "path": 0,
+      "head": 0,
+      "rotation": -153,
+      "reference_screen_angle": 63
+    },
+    {
+      "color": "pink",
+      "path": 0,
+      "head": 1,
+      "rotation": -200,
+      "reference_screen_angle": 110
+    },
+    {
+      "color": "pink",
+      "path": 1,
+      "head": 0,
+      "rotation": -154,
+      "reference_screen_angle": 64
+    },
+    {
+      "color": "pink",
+      "path": 1,
+      "head": 1,
+      "rotation": -201,
+      "reference_screen_angle": 111
+    },
+    {
+      "color": "pink",
+      "path": 2,
+      "head": 0,
+      "rotation": -196,
+      "reference_screen_angle": 106
+    },
+    {
+      "color": "pink",
+      "path": 2,
+      "head": 1,
+      "rotation": -148,
+      "reference_screen_angle": 58
+    },
+    {
+      "color": "blue",
+      "path": 0,
+      "head": 0,
+      "rotation": -105,
+      "reference_screen_angle": 15
+    },
+    {
+      "color": "blue",
+      "path": 0,
+      "head": 1,
+      "rotation": -156,
+      "reference_screen_angle": 66
+    },
+    {
+      "color": "blue",
+      "path": 1,
+      "head": 0,
+      "rotation": -177,
+      "reference_screen_angle": 87
+    },
+    {
+      "color": "blue",
+      "path": 1,
+      "head": 1,
+      "rotation": -201,
+      "reference_screen_angle": 111
+    },
+    {
+      "color": "red",
+      "path": 0,
+      "head": 0,
+      "rotation": -106,
+      "reference_screen_angle": 16
+    },
+    {
+      "color": "red",
+      "path": 0,
+      "head": 1,
+      "rotation": -191,
+      "reference_screen_angle": 101
+    },
+    {
+      "color": "red",
+      "path": 1,
+      "head": 0,
+      "rotation": -208,
+      "reference_screen_angle": 118
+    },
+    {
+      "color": "red",
+      "path": 1,
+      "head": 1,
+      "rotation": -104,
+      "reference_screen_angle": 14
+    },
+    {
+      "color": "red",
+      "path": 2,
+      "head": 0,
+      "rotation": -123,
+      "reference_screen_angle": 33
+    },
+    {
+      "color": "red",
+      "path": 2,
+      "head": 1,
+      "rotation": -158,
+      "reference_screen_angle": 68
+    },
+    {
+      "color": "orange",
+      "path": 0,
+      "head": 0,
+      "rotation": -148,
+      "reference_screen_angle": 58
+    },
+    {
+      "color": "orange",
+      "path": 0,
+      "head": 1,
+      "rotation": -120,
+      "reference_screen_angle": 30
+    },
+    {
+      "color": "orange",
+      "path": 1,
+      "head": 0,
+      "rotation": -136,
+      "reference_screen_angle": 46
+    },
+    {
+      "color": "orange",
+      "path": 1,
+      "head": 1,
+      "rotation": -114,
+      "reference_screen_angle": 24
+    },
+    {
+      "color": "purple",
+      "path": 0,
+      "head": 0,
+      "rotation": -122,
+      "reference_screen_angle": 32
+    },
+    {
+      "color": "purple",
+      "path": 0,
+      "head": 1,
+      "rotation": -300,
+      "reference_screen_angle": 210
+    }
+  ]
+}
